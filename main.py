@@ -12,7 +12,7 @@ import trainer
 def run_experiment(arch="resnet", blocks=None, arch_kwargs=None,
                    method_name="supervised", dataset="cifar10",
                    data_root="data", batch_size=128, num_workers=2,
-                   epochs=164, lr=0.1, momentum=0.9, weight_decay=1e-4,
+                   epochs=2, lr=0.1, momentum=0.9, weight_decay=1e-4,
                    milestones=(82, 123), gamma=0.1, seed=42, amp=True,
                    out_dir="runs", run_name=None, log_interval=100):
     torch.manual_seed(seed)

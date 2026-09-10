@@ -1,8 +1,6 @@
 import os
-
 import torch
 import torch.optim as optim
-
 import architectures
 import datasets
 import methods

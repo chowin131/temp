@@ -65,7 +65,7 @@ def evaluate(method, dataloader, device, use_amp=False):
 
 
 def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
-        device, epochs=164, amp=True, ckpt_path="runs/checkpoint.pth",
+        device, epochs=2, amp=True, ckpt_path="runs/checkpoint.pth",
         result_path="runs/result.json", log_interval=100):
     scaler = torch.amp.GradScaler(device, enabled=amp and device == "cuda")
     os.makedirs(os.path.dirname(ckpt_path) or ".", exist_ok=True)

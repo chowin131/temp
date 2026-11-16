@@ -13,14 +13,19 @@ def plot_result(result, title=None):
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
 
     axes[0].plot(epochs, result["train_loss"], label="train")
-    axes[0].plot(epochs, result["test_loss"], label="test")
+    if result["test_loss"]:
+        axes[0].plot(epochs, result["test_loss"], label="test")
     axes[0].set_xlabel("epoch")
     axes[0].set_ylabel("loss")
     axes[0].legend()
 
-    axes[1].plot(epochs, [acc * 100 for acc in result["test_acc"]])
+    if result["test_acc"]:
+        axes[1].plot(epochs, [acc * 100 for acc in result["test_acc"]])
+        axes[1].set_ylabel("test acc (%)")
+    else:
+        axes[1].plot(result["knn_epoch"], [a[-1] * 100 for a in result["knn_acc"]], marker="o")
+        axes[1].set_ylabel("kNN acc (%)")
     axes[1].set_xlabel("epoch")
-    axes[1].set_ylabel("test acc (%)")
 
     axes[2].plot(epochs, result["lr"])
     axes[2].set_xlabel("epoch")

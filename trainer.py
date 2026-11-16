@@ -31,7 +31,6 @@ def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
     os.makedirs(os.path.dirname(weight_path) or ".", exist_ok=True)
     result = {"train_loss": [], "test_loss": [], "test_acc": [], "lr": [],
               "knn_epoch": [], "knn_acc": []}
-    best_acc = 0.0
     start = time.time()
 
     for epoch in range(epochs):
@@ -54,16 +53,14 @@ def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
                 print(f"loss: {loss.item():>7f}  [{seen:>5d}]")
 
         train_loss = total_loss / seen
-        test_loss, test_acc = evaluate(method, test_dataloader, device)
-        scheduler.step()
-
         result["train_loss"].append(train_loss)
-        result["test_loss"].append(test_loss)
-        result["test_acc"].append(test_acc)
 
-        if test_acc > best_acc:
-            best_acc = test_acc
-            torch.save(method.state_dict(), weight_path)
+        # evaluate가 있는 method만 test loss, acc 계산 (pretraining method는 knn으로 확인)
+        if hasattr(method, "evaluate"):
+            test_loss, test_acc = evaluate(method, test_dataloader, device)
+            result["test_loss"].append(test_loss)
+            result["test_acc"].append(test_acc)
+        scheduler.step()
 
         # knn_interval 간격의 에포크들과 마지막 에포크 끝난 후 학습 없이 knn으로 encoder 평가함
         last = epoch + 1 == epochs
@@ -73,14 +70,16 @@ def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
 
             result["knn_epoch"].append(epoch + 1)
             result["knn_acc"].append(accs)
-            print("kNN acc (stage별): " + ", ".join(f"{a * 100:.2f}%" for a in accs))
+            print("knn acc (stage별): " + ", ".join(f"{a * 100:.2f}%" for a in accs))
+
+        torch.save(method.state_dict(), weight_path)
 
         with open(result_path, "w") as f:
             json.dump(result, f)
 
         elapsed = (time.time() - start) / 60
         eta = elapsed / (epoch + 1) * (epochs - epoch - 1)
-        print(f"[{elapsed:.1f}m elapsed | ETA {eta:.1f}m | best {best_acc * 100:.2f}%]\n")
+        print(f"[{elapsed:.1f}m elapsed | ETA {eta:.1f}m]\n")
 
-    print(f"Done! best test acc = {best_acc * 100:.2f}%")
-    return result, best_acc
+    print("Done!")
+    return result

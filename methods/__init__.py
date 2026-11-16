@@ -1,7 +1,10 @@
-"""학습 방식 모음. method는 encoder를 감싸고 forward(batch)가 loss를 준다."""
+"""
+    method는 encoder를 포함함.
+    forward(batch)가 loss 계산해서 줌.
+"""
 
 from .supervised_learning import SupervisedLearning
-from .self_supervised_learning_rotnet import RotNet
+from .rotnet import RotNet
 
 METHOD_REGISTRY = {
     "supervised": SupervisedLearning,

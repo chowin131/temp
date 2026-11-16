@@ -10,16 +10,13 @@ def join(outputs, p_local=0.0, training=False):
             keep[torch.randint(len(outputs), (1,))] = True
         outputs = [y for y, k in zip(outputs, keep) if k]
 
-    if len(outputs) == 1:
-        return outputs[0]
-    return sum(outputs) / len(outputs)
+    return outputs[0] if len(outputs) == 1 else sum(outputs) / len(outputs)
 
 
 class Base(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1,
-                              bias=False)
+        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -47,9 +44,7 @@ class Block(nn.Module):
         hidden = join(self.deep1(x, deep_col), self.p_local, self.training)
         ys = self.deep2(hidden, deep_col)
 
-        if global_col is not None:
-            return ys
-        return [self.base(x)] + ys
+        return ys if global_col is not None else [self.base(x)] + ys
 
 
 class FractalNet(nn.Module):
@@ -70,13 +65,8 @@ class FractalNet(nn.Module):
         self.blocks = nn.ModuleList(stages)
         self.num_features = in_channels
 
-    def sample_global_col(self):
-        if self.training and torch.rand(()) < self.p_global:
-            return int(torch.randint(self.max_cols, ()))
-        return None
-
     def forward(self, x):
-        global_col = self.sample_global_col()
+        global_col = int(torch.randint(self.max_cols, ())) if self.training and torch.rand(()) < self.p_global else None
 
         for block, num_cols in zip(self.blocks, self.block_cols):
             col = None if global_col is None else min(global_col, num_cols - 1)

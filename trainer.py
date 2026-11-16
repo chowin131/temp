@@ -1,87 +1,60 @@
-"""학습/평가 루프.
-
-method 안이 어떻게 생겼는지는 여기서 신경쓰지 않는다.
-학습은 loss = method(batch), 평가는 method.evaluate(batch)만 쓴다.
-"""
-
 import json
 import os
 import time
-
 import torch
-
-
-def to_device(batch, device):
-    return [t.to(device) for t in batch]
-
-
-def train_one_epoch(method, dataloader, optimizer, device, scaler,
-                    log_interval=100):
-    method.train()
-    total_loss, seen = 0.0, 0
-
-    for step, batch in enumerate(dataloader):
-        batch = to_device(batch, device)
-        size = batch[0].size(0)
-
-        optimizer.zero_grad()
-
-        # scaler가 꺼져 있으면 scale/step/update가 평범한 backward/step이 됨
-        with torch.amp.autocast(device_type=device,
-                                enabled=scaler.is_enabled()):
-            loss = method(batch)
-
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
-
-        total_loss += loss.item() * size
-        seen += size
-
-        if log_interval and step % log_interval == 0:
-            print(f"loss: {loss.item():>7f}  [{seen:>5d}]")
-
-    return total_loss / seen
+import knn
 
 
 @torch.no_grad()
-def evaluate(method, dataloader, device, use_amp=False):
+def evaluate(method, dataloader, device):
     method.eval()
     total_loss, correct, seen = 0.0, 0, 0
 
     for batch in dataloader:
-        batch = to_device(batch, device)
-        with torch.amp.autocast(device_type=device, enabled=use_amp):
-            loss_sum, num_correct, size = method.evaluate(batch)
+        batch = [t.to(device) for t in batch]
+        loss_sum, num_correct, size = method.evaluate(batch)
         total_loss += loss_sum.item()
         correct += int(num_correct)
         seen += size
 
     test_loss = total_loss / seen
     accuracy = correct / seen
-    print(f"Test Error: \n Accuracy: {(100 * accuracy):>0.1f}%, "
-          f"Avg loss: {test_loss:>8f} \n")
+    print(f"Test Error: \n Accuracy: {(100 * accuracy):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     return test_loss, accuracy
 
 
 def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
-        device, epochs=164, amp=True, ckpt_path="result/checkpoint.pth",
-        result_path="result/result.json", log_interval=100):
-    scaler = torch.amp.GradScaler(device, enabled=amp and device == "cuda")
-    os.makedirs(os.path.dirname(ckpt_path) or ".", exist_ok=True)
+        device, epochs=164, weight_path="result/checkpoint.pth",
+        result_path="result/result.json", log_interval=100,
+        knn_dataloader=None, num_classes=10, knn_k=1, knn_interval=10):
 
-    result = {"train_loss": [], "test_loss": [], "test_acc": [], "lr": []}
+    os.makedirs(os.path.dirname(weight_path) or ".", exist_ok=True)
+    result = {"train_loss": [], "test_loss": [], "test_acc": [], "lr": [],
+              "knn_epoch": [], "knn_acc": []}
     best_acc = 0.0
     start = time.time()
 
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}\n-------------------------------")
-
         result["lr"].append(optimizer.param_groups[0]["lr"])
-        train_loss = train_one_epoch(method, train_dataloader, optimizer,
-                                     device, scaler, log_interval)
-        test_loss, test_acc = evaluate(method, test_dataloader, device,
-                                       use_amp=scaler.is_enabled())
+
+        # 학습
+        method.train()
+        total_loss, seen = 0.0, 0
+        for step, batch in enumerate(train_dataloader):
+            batch = [t.to(device) for t in batch]
+            size = batch[0].size(0)
+            optimizer.zero_grad()
+            loss = method(batch)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item() * size
+            seen += size
+            if log_interval and step % log_interval == 0:
+                print(f"loss: {loss.item():>7f}  [{seen:>5d}]")
+
+        train_loss = total_loss / seen
+        test_loss, test_acc = evaluate(method, test_dataloader, device)
         scheduler.step()
 
         result["train_loss"].append(train_loss)
@@ -90,15 +63,24 @@ def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
 
         if test_acc > best_acc:
             best_acc = test_acc
-            torch.save(method.state_dict(), ckpt_path)
+            torch.save(method.state_dict(), weight_path)
+
+        # knn_interval 간격의 에포크들과 마지막 에포크 끝난 후 학습 없이 knn으로 encoder 평가함
+        last = epoch + 1 == epochs
+        if knn_dataloader is not None and ((epoch + 1) % knn_interval == 0 or last):
+            accs = knn.knn_evaluate(method.encoder, knn_dataloader, test_dataloader,
+                                    device, num_classes, k=knn_k)
+
+            result["knn_epoch"].append(epoch + 1)
+            result["knn_acc"].append(accs)
+            print("kNN acc (stage별): " + ", ".join(f"{a * 100:.2f}%" for a in accs))
 
         with open(result_path, "w") as f:
             json.dump(result, f)
 
         elapsed = (time.time() - start) / 60
         eta = elapsed / (epoch + 1) * (epochs - epoch - 1)
-        print(f"[{elapsed:.1f}m elapsed | ETA {eta:.1f}m | "
-              f"best {best_acc * 100:.2f}%]\n")
+        print(f"[{elapsed:.1f}m elapsed | ETA {eta:.1f}m | best {best_acc * 100:.2f}%]\n")
 
     print(f"Done! best test acc = {best_acc * 100:.2f}%")
     return result, best_acc

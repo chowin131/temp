@@ -5,17 +5,13 @@ from torchvision.transforms import v2
 
 NUM_CLASSES = {"cifar10": 10, "cifar100": 100}
 
-# 이름 -> (torchvision 클래스, mean, std)
 CIFAR = {
-    "cifar10": (datasets.CIFAR10,
-                (0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
-    "cifar100": (datasets.CIFAR100,
-                 (0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762)),
+    "cifar10": (datasets.CIFAR10, (0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+    "cifar100": (datasets.CIFAR100, (0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762)),
 }
 
 
-def get_dataloaders(name="cifar10", root="data", batch_size=128,
-                    num_workers=2):
+def get_dataloaders(name="cifar10", root="data", batch_size=128, num_workers=2):
     dataset_cls, mean, std = CIFAR[name]
 
     train_transform = v2.Compose([
@@ -45,5 +41,12 @@ def get_dataloaders(name="cifar10", root="data", batch_size=128,
         test_data, batch_size=batch_size, num_workers=num_workers,
         pin_memory=True, persistent_workers=num_workers > 0,
     )
+    # 학습없이 knn할 때 사용할 train 이미지(feature 뽑는 용도), augmentation과 shuffle 없이 가져옴
+    knn_data = dataset_cls(root=root, train=True, download=True,
+                           transform=test_transform)
+    knn_dataloader = DataLoader(
+        knn_data, batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True, persistent_workers=num_workers > 0,
+    )
 
-    return train_dataloader, test_dataloader
+    return train_dataloader, test_dataloader, knn_dataloader

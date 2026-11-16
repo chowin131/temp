@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 class SupervisedLearning(nn.Module):
-    """encoder가 뽑은 feature를 linear classifier로 분류하는 학습 방식."""
+    """encoder가 뽑은 feature vector를 linear classifier가 분류함."""
 
     def __init__(self, encoder, num_classes):
         super().__init__()

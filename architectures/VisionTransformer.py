@@ -67,7 +67,7 @@ class VisionTransformer(nn.Module):
                                stride=patch_size, padding=0, bias=True)
 
         self.class_token = nn.Parameter(torch.zeros(1, 1, dim))
-        # position embedding은 0으로 두면 위치 구분이 안 되므로 작게 랜덤 초기화
+        # position embedding은 작게 랜덤 초기화
         self.pos_embedding = nn.Parameter(
             torch.randn(1, num_patches + 1, dim) * 0.02
         )

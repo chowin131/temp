@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import warnings
 import torch
 import knn
 
@@ -26,14 +27,31 @@ def evaluate(method, dataloader, device):
 def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
         device, epochs=164, weight_path="result/checkpoint.pth",
         result_path="result/result.json", log_interval=100,
-        knn_dataloader=None, num_classes=10, knn_k=1, knn_interval=10):
+        knn_dataloader=None, num_classes=10, knn_k=1, knn_interval=10,
+        resume=False):
 
     os.makedirs(os.path.dirname(weight_path) or ".", exist_ok=True)
     result = {"train_loss": [], "test_loss": [], "test_acc": [], "lr": [],
               "knn_epoch": [], "knn_acc": []}
+    start_epoch = 0
+
+    # resume하면 매 epoch 저장된 .pth(weight)와 .json(log)에서 이어서 학습
+    # json의 train_loss 길이 = 끝난 epoch 수.
+    # SGD momentum 버퍼는 저장 안 해서 0부터 다시 쌓임
+    if resume and os.path.exists(weight_path) and os.path.exists(result_path):
+        with open(result_path, "r") as f:
+            result = json.load(f)
+        start_epoch = len(result["train_loss"])
+        method.load_state_dict(torch.load(weight_path, map_location=device))
+        with warnings.catch_warnings():  # optimizer.step 전에 scheduler.step 부른다는 경고 무시
+            warnings.simplefilter("ignore")
+            for _ in range(start_epoch):  # lr schedule을 끝난 epoch까지 진행
+                scheduler.step()
+        print(f"resume: epoch {start_epoch}까지 끝난 상태에서 이어서 학습\n")
+
     start = time.time()
 
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         print(f"Epoch {epoch + 1}\n-------------------------------")
         result["lr"].append(optimizer.param_groups[0]["lr"])
 
@@ -78,7 +96,7 @@ def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
             json.dump(result, f)
 
         elapsed = (time.time() - start) / 60
-        eta = elapsed / (epoch + 1) * (epochs - epoch - 1)
+        eta = elapsed / (epoch + 1 - start_epoch) * (epochs - epoch - 1)
         print(f"[{elapsed:.1f}m elapsed | ETA {eta:.1f}m]\n")
 
     print("Done!")

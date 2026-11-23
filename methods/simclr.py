@@ -24,10 +24,7 @@ class SimCLR(nn.Module):
         self.temperature = temperature
 
     def nt_xent(self, z):
-        """
-            z는 (2N, D)로 되어있고, 앞의 N개가 view 1이고, 뒤의 N개가 view 2임.
-            (i, i + N)이 positive 쌍, 나머지 모든 조합은 negative 쌍임.
-        """
+        """z는 (2N, D), (i, i + N)이 positive 쌍, 나머지 모든 조합은 negative 쌍임."""
         n = z.size(0) // 2
         z = F.normalize(z, dim=1)
         sim = z @ z.T / self.temperature  # 정규화했으니 내적 = cosine similarity
@@ -37,6 +34,5 @@ class SimCLR(nn.Module):
         return F.cross_entropy(sim, target)
 
     def forward(self, batch):
-        x, _ = batch  # x는 (N, 2, C, H, W), 라벨은 사용하지 않음
-        x = torch.cat([x[:, 0], x[:, 1]]) # 배치에 있는 N개의 sample 각각 view 2개씩 총 2N개를 한 batch로 묶어서 사용
-        return self.nt_xent(self.projector(self.encoder(x)))
+        (x1, x2), _ = batch
+        return self.nt_xent(self.projector(self.encoder(torch.cat([x1, x2]))))

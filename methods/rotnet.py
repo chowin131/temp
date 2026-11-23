@@ -16,20 +16,20 @@ class RotNet(nn.Module):
         fine tuning 단계에서는 pre training된 encoder를 가져오고 새 classifier를 붙여 encoder와 같이 학습함.
     """
 
-    def __init__(self, encoder, num_classes=None):  # num_classes는 get_method 형식 맞추기 용도
+    def __init__(self, encoder, num_classes=None):  # num_classes는 get_method 형식 맞추려고 넣음
         super().__init__()
         self.encoder = encoder
         self.classifier = nn.Linear(encoder.num_features, 4)
 
     @staticmethod
     def rotate(x):
-        num = x.size(0)  # x는 (batch 번호, 채널, H, W)
+        num = x.size(0) # x는 (batch 번호, C, H, W)
         x = torch.cat([torch.rot90(x, k, (2, 3)) for k in range(4)], 0)
         y = torch.tensor([0]*num + [1]*num + [2]*num + [3]*num, device=x.device)
         return x, y
 
     def forward(self, batch):
-        x, _ = batch  # 원래 라벨은 사용하지 않음
+        x, _ = batch
         x, y = self.rotate(x)
         y_pred = self.classifier(self.encoder(x))
         return F.cross_entropy(y_pred, y)

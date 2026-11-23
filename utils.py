@@ -23,7 +23,7 @@ def plot_result(result, title=None):
         axes[1].plot(epochs, [acc * 100 for acc in result["test_acc"]])
         axes[1].set_ylabel("test acc (%)")
     else:
-        axes[1].plot(result["knn_epoch"], [a[-1] * 100 for a in result["knn_acc"]], marker="o")
+        axes[1].plot(result["knn_epoch"], [a * 100 for a in result["knn_acc"]], marker="o")
         axes[1].set_ylabel("kNN acc (%)")
     axes[1].set_xlabel("epoch")
 

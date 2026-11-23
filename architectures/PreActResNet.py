@@ -77,19 +77,6 @@ class PreActResNet(nn.Module):
         return nn.Conv2d(in_channels, out_channels, kernel_size=1,
                          stride=stride, bias=False)
 
-    def forward_features(self, x):
-        """stage별 feature map 리스트. 마지막 stage만 bn, relu까지 거친 최종값"""
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = F.relu(x)
-
-        features = []
-        for stage in self.blocks:
-            x = stage(x)
-            features.append(x)
-        features[-1] = F.relu(self.bn_final(features[-1]))
-        return features
-
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)

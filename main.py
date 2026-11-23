@@ -10,6 +10,7 @@ import trainer
 
 def load_encoder(encoder, weight_path):
     """
+        weight 가져오는 부분
         fit이 저장한 .pth(encoder + classifier 가중치)에서 encoder 가중치만 꺼내 encoder에 넣음.
         예: encoder.blocks.0.0.conv1.weight
           method.encoder    # encoder의 정보인지 classifier의 정보인지
@@ -34,7 +35,7 @@ def run_experiment(arch="resnet20", method_name="supervised",
                    weight_decay=1e-4, schedule="step", milestones=(82, 123), gamma=0.1,
                    warmup_epochs=0, seed=42, out_dir="result", run_name=None,
                    encoder_weight=None, method_kwargs=None,
-                   knn_k=1, knn_interval=10, log_interval=100, resume=False):
+                   knn_interval=10, log_interval=100, resume=False):
 
     torch.manual_seed(seed)
     torch.backends.cudnn.benchmark = True
@@ -80,6 +81,5 @@ def run_experiment(arch="resnet20", method_name="supervised",
         weight_path=os.path.join(out_dir, f"{run_name}.pth"),
         result_path=os.path.join(out_dir, f"{run_name}.json"),
         log_interval=log_interval, knn_dataloader=knn_dataloader,
-        num_classes=datasets.NUM_CLASSES[dataset], knn_k=knn_k, knn_interval=knn_interval,
-        resume=resume,
+        knn_interval=knn_interval, resume=resume,
     )

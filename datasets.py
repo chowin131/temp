@@ -12,13 +12,13 @@ CIFAR = {
 
 
 class MakeTwoViews:
-    """sample 하나에 transform을 두 번 각각 적용해서 (2, C, H, W)"""
+    """sample 하나에 transform을 두 번 각각 적용해서, 배치에서 꺼낼 때 [x1, x2], y 형태로 꺼내짐"""
 
     def __init__(self, transform):
         self.transform = transform
 
     def __call__(self, img):
-        return torch.stack([self.transform(img), self.transform(img)])
+        return [self.transform(img), self.transform(img)]
 
 
 def get_dataloaders(name="cifar10", root="data", batch_size=128, num_workers=2):
@@ -36,7 +36,7 @@ def get_dataloaders(name="cifar10", root="data", batch_size=128, num_workers=2):
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=mean, std=std),
     ])
-    # SimCLR, MoCo용 augmentation (CIFAR는 blur 적용 X)
+    # SimCLR, MoCo용 augmentation (CIFAR는 blur 적용 안함)
     contrastive_transform = v2.Compose([
         v2.ToImage(),
         v2.RandomResizedCrop(32, scale=(0.08, 1.0), antialias=True),

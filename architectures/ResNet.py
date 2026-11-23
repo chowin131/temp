@@ -70,21 +70,6 @@ class ResNet(nn.Module):
             nn.BatchNorm2d(out_channels),
         )
 
-    def forward_features(self, x):
-        """
-            stage별 feature map 리스트를 return함
-            resnet20이면 (16,32,32), (32,16,16), (64,8,8)
-        """
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = F.relu(x)
-
-        features = []
-        for stage in self.blocks:
-            x = stage(x)
-            features.append(x)
-        return features
-
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)

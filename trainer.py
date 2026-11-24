@@ -67,6 +67,8 @@ def fit(method, train_dataloader, test_dataloader, optimizer, scheduler,
             loss = method(batch)
             loss.backward()
             optimizer.step()
+            if hasattr(method, "update_target"):
+                method.update_target(epoch * len(train_dataloader) + step, epochs * len(train_dataloader))
             total_loss += loss.item() * size
             seen += size
             if log_interval and step % log_interval == 0:

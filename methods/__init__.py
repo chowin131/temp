@@ -7,6 +7,8 @@ from .supervised_learning import SupervisedLearning
 from .rotnet import RotNet
 from .simclr import SimCLR
 from .moco import MoCo
+from .byol import BYOL
+from .simsiam import SimSiam
 from .linear_eval import LinearEval
 
 METHOD_REGISTRY = {
@@ -14,6 +16,8 @@ METHOD_REGISTRY = {
     "rotnet": RotNet,
     "simclr": SimCLR,
     "moco": MoCo,
+    "byol": BYOL,
+    "simsiam": SimSiam,
     "linear": LinearEval,
 }
 
